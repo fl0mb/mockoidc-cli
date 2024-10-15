@@ -1,15 +1,43 @@
+# mockoidc-cli
+
+Originally a fork of [mockoidc](https://github.com/oauth2-proxy/mockoidc) to test Azure Workload Federation, I tried to create a more general purpose CLI application to play arround with [OAuth2](https://datatracker.ietf.org/doc/html/rfc6749) and [OIDC](https://openid.net/specs/openid-connect-core-1_0.html).
+
+Use the following to test Azure Workload Federation:
+
+```bash
+tenantid=
+issuer=
+msclientid=
+msscope=https://graph.microsoft.com/.default
+
+code=$(curl -s -k $issuer/oidc/authorize?\
+scope=openid\
+"&state=xxx"\
+"&client_id=api://AzureADTokenExchange"\
+"&response_type=code"\
+"&redirect_uri=http://127.0.0.1:8080" |  awk -F 'code=' '{print $2}' | cut -d '&' -f1)
+
+token=$(curl -s -k $issuer/oidc/token?\
+"client_id=api://AzureADTokenExchange"\
+"&client_secret=secret"\
+"&grant_type=authorization_code"\
+"&code=$code" | jq -r '.id_token')
+
+curl -s -X POST https://login.microsoftonline.com/$tenantid/oauth2/v2.0/token -d "scope=$msscope&client_id=$msclientid&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&grant_type=client_credentials&client_assertion=$token" | jq
+```
+
+Todo:
+- no implicit flow yet, see what else is missing and play with grant types
+- remove cert dir ?
+
+
+# Original README
 # mockoidc
 
 A Mock OpenID Connect Server for Authentication Unit and Integration Tests.
 
 Created by @NickMeves and @egrif during the [Greenhouse Software](https://medium.com/in-the-weeds)
 2021 Q1 Hack Day.
-
-[![Go Report Card](https://goreportcard.com/badge/github.com/fl0mb/mockoidc)](https://goreportcard.com/report/github.com/fl0mb/mockoidc)
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![Maintainability](https://api.codeclimate.com/v1/badges/99c0561090d1002dc7e3/maintainability)](https://codeclimate.com/github/oauth2-proxy/mockoidc/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/99c0561090d1002dc7e3/test_coverage)](https://codeclimate.com/github/oauth2-proxy/mockoidc/test_coverage)
-
 ## Usage
 
 Import the package

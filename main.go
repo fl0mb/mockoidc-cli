@@ -92,7 +92,7 @@ func main() {
 	clientid := flag.String("client-id", "api://AzureADTokenExchange", "client-id to request token with")
 	clientsecret := flag.String("client-secret", "secret", "client secret")
 	https := flag.Bool("https", false, "Whether to serve using https instead of http. This will automatically create a self-signed certificate in memory")
-	cn := flag.String("cn", "secret", "Define the common name for a automatically requested Let's Encrypt certificate. This option implies \"https\" and it will start an autocert listener on port 80 to complete a HTTP-01 challenge.")
+	cn := flag.String("cn", "secret", "Define the common name for a automatically requested Let's Encrypt certificate. This option implies \"https\" and it will start an autocert listener on port 80 to complete a HTTP-01 challenge. The cert issuance starts with the first request, expect a short delay")
 	flag.Parse()
 
 	ln, err := net.Listen("tcp", *listener)
@@ -114,8 +114,8 @@ func main() {
 	}
 	m.AddMiddleware(middleware)
 
-	if *https {
-		if *cn != "" {
+	if *https || *cn != "" {
+		if *cn == "" {
 			cert := genTLSmemory(m.GetIssuer())
 			tlsConfig := &tls.Config{
 				Certificates: []tls.Certificate{*cert},
