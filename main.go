@@ -16,7 +16,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fl0mb/mockoidc"
+	"github.com/fl0mb/mockoidc-cli/mockoidc"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -85,7 +85,6 @@ func autocert_get(cn string) *tls.Config {
 
 func main() {
 
-	//brauch ich das noch ?
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -93,7 +92,6 @@ func main() {
 	clientid := flag.String("client-id", "api://AzureADTokenExchange", "client-id to request token with")
 	clientsecret := flag.String("client-secret", "secret", "client secret")
 	https := flag.Bool("https", false, "Whether to serve using https instead of http. This will automatically create a self-signed certificate in memory")
-	// bis hier geht alles jetzt noch tls lösen
 	cn := flag.String("cn", "secret", "Define the common name for a automatically requested Let's Encrypt certificate. This option implies \"https\" and it will start an autocert listener on port 80 to complete a HTTP-01 challenge.")
 	flag.Parse()
 
@@ -117,17 +115,23 @@ func main() {
 	m.AddMiddleware(middleware)
 
 	if *https {
-		cert := genTLSmemory(m.GetIssuer())
-		tlsConfig := &tls.Config{
-			Certificates: []tls.Certificate{*cert},
+		if *cn != "" {
+			cert := genTLSmemory(m.GetIssuer())
+			tlsConfig := &tls.Config{
+				Certificates: []tls.Certificate{*cert},
+			}
+			m.Start(ln, tlsConfig)
+			defer m.Shutdown()
+		} else {
+			m.Issuer = *cn
+			m.Start(ln, autocert_get(*cn))
+			defer m.Shutdown()
+
 		}
-		m.Start(ln, tlsConfig)
-		defer m.Shutdown()
-	} else if *cn != "" {
-		m.Issuer = *cn
-		m.Start(ln, autocert_get(*cn))
+
 	} else {
 		m.Start(ln, nil)
+		defer m.Shutdown()
 	}
 
 	fmt.Printf("Issuer: %s\nclient_id: %s\nclient_secret: %s\n", m.GetIssuer(), m.ClientID, m.ClientSecret)
